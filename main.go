@@ -9,14 +9,26 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
+type Score struct {
+	question int
+	answer   int
+}
+
+func (s Score) printScore() {
+	fmt.Printf("Total correct answers: %d/%d\n", s.answer, s.question)
+}
+
 var (
-	fileFlag string
+	fileFlag    string
+	timeoutFlag int
 )
 
 func init() {
 	flag.StringVar(&fileFlag, "f", "test/fixtures/problems.csv", "filepath")
+	flag.IntVar(&timeoutFlag, "t", 0, "Set time limit to the quiz")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n", os.Args[0])
 		fmt.Println("Options:")
@@ -46,15 +58,37 @@ func main() {
 
 	records = validateQuestions(records)
 
-	RunQuiz(records)
+	scoreChan := make(chan Score)
+	go RunQuiz(records, scoreChan, timeoutFlag)
+
+	score := <-scoreChan
+	score.printScore()
 }
 
-func RunQuiz(records [][]string) {
-	stdinReader := bufio.NewReader(os.Stdin)
+func RunQuiz(records [][]string, scoreChan chan<- Score, duration int) {
 	totalQuestion := len(records)
-	var totalCorrectAnswers int
+	score := Score{
+		question: totalQuestion,
+	}
+
+	if duration != 0 {
+		timeout := time.Duration(duration) * time.Second
+		timer := time.NewTimer(timeout)
+		defer timer.Stop()
+
+		go func() {
+			<-timer.C
+			fmt.Println("\nTime's up! Quiz is over.")
+			scoreChan <- score
+		}()
+	}
+
+	stdinReader := bufio.NewReader(os.Stdin)
 
 	fmt.Printf("This quiz contains %d questions. Please answer it and marks will be given by the end of the quiz\n", totalQuestion)
+	if duration != 0 {
+		fmt.Printf("You have %d seconds to answer all questions\n", totalQuestion)
+	}
 
 	for i, record := range records {
 		correctAnswer, _ := strconv.Atoi(record[1])
@@ -82,11 +116,11 @@ func RunQuiz(records [][]string) {
 		}
 
 		if providedAnswer == correctAnswer {
-			totalCorrectAnswers++
+			score.answer++
 		}
 	}
 
-	fmt.Printf("Total correct answers: %d/%d\n", totalCorrectAnswers, totalQuestion)
+	scoreChan <- score
 }
 
 func validateQuestions(records [][]string) [][]string {
