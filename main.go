@@ -3,17 +3,29 @@ package main
 import (
 	"bufio"
 	"encoding/csv"
+	"flag"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 )
 
-func main() {
-	stdinReader := bufio.NewReader(os.Stdin)
-	args := os.Args
+var (
+	fileFlag string
+)
 
-	path := args[1]
+func init() {
+	flag.StringVar(&fileFlag, "f", "problems.csv", "filepath")
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n", os.Args[0])
+		fmt.Println("Options:")
+		flag.PrintDefaults()
+	}
+}
+
+func main() {
+	flag.Parse()
+	path := *&fileFlag
 
 	file, err := os.Open(path)
 	if err != nil {
