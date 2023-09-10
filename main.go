@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/csv"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -15,7 +16,7 @@ var (
 )
 
 func init() {
-	flag.StringVar(&fileFlag, "f", "problems.csv", "filepath")
+	flag.StringVar(&fileFlag, "f", "test/fixtures/problems.csv", "filepath")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n", os.Args[0])
 		fmt.Println("Options:")
@@ -43,6 +44,12 @@ func main() {
 		return
 	}
 
+	records = validateQuestions(records)
+
+	RunQuiz(records)
+}
+
+func RunQuiz(records [][]string) {
 	stdinReader := bufio.NewReader(os.Stdin)
 	totalQuestion := len(records)
 	var totalCorrectAnswers int
@@ -55,6 +62,7 @@ func main() {
 		var (
 			line           string
 			providedAnswer int
+			err            error
 		)
 
 		for {
@@ -65,17 +73,47 @@ func main() {
 				return
 			}
 
-			if providedAnswer, err = strconv.Atoi(strings.TrimRight(line, "\n")); err == nil {
-				if providedAnswer == correctAnswer {
-					totalCorrectAnswers++
-				}
-				break
+			if providedAnswer, err = strconv.Atoi(strings.TrimRight(line, "\n")); err != nil {
+				fmt.Fprintln(os.Stderr, "Invalid number:", err)
+				continue
 			}
 
-			fmt.Fprintln(os.Stderr, "Invalid number:", err)
+			break
 		}
 
+		if providedAnswer == correctAnswer {
+			totalCorrectAnswers++
+		}
 	}
 
 	fmt.Printf("Total correct answers: %d/%d\n", totalCorrectAnswers, totalQuestion)
+}
+
+func validateQuestions(records [][]string) [][]string {
+	var result [][]string
+	var err error
+	for _, record := range records {
+		if err = validQuestion(record[0]); err != nil {
+			break
+		}
+		if err = validAnswer(record[1]); err != nil {
+			break
+		}
+
+		result = append(result, []string{record[0], record[1]})
+
+	}
+	return result
+}
+
+func validQuestion(q string) error {
+	return nil
+}
+
+func validAnswer(a string) error {
+	_, err := strconv.Atoi(a)
+	if err != nil {
+		return errors.New("Invalid number")
+	}
+	return nil
 }
