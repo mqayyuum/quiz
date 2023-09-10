@@ -43,6 +43,7 @@ func main() {
 		return
 	}
 
+	stdinReader := bufio.NewReader(os.Stdin)
 	totalQuestion := len(records)
 	var totalCorrectAnswers int
 
@@ -51,21 +52,27 @@ func main() {
 	for i, record := range records {
 		correctAnswer, _ := strconv.Atoi(record[1])
 
-		fmt.Printf("Question %d: %s = ", i+1, record[0])
-		line, err := stdinReader.ReadString('\n')
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error reading solution:", err)
-			return
-		}
+		var (
+			line           string
+			providedAnswer int
+		)
 
-		providedAnswer, err := strconv.Atoi(strings.TrimRight(line, "\n"))
-		if err != nil {
+		for {
+			fmt.Printf("Question %d: %s = ", i+1, record[0])
+
+			if line, err = stdinReader.ReadString('\n'); err != nil {
+				fmt.Fprintln(os.Stderr, "Error reading solution:", err)
+				return
+			}
+
+			if providedAnswer, err = strconv.Atoi(strings.TrimRight(line, "\n")); err == nil {
+				if providedAnswer == correctAnswer {
+					totalCorrectAnswers++
+				}
+				break
+			}
+
 			fmt.Fprintln(os.Stderr, "Invalid number:", err)
-			return
-		}
-
-		if providedAnswer == correctAnswer {
-			totalCorrectAnswers++
 		}
 
 	}
