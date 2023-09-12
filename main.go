@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -24,11 +25,13 @@ func (s Score) printScore() {
 var (
 	fileFlag    string
 	timeoutFlag int
+	shuffle     bool
 )
 
 func init() {
-	flag.StringVar(&fileFlag, "f", "test/fixtures/problems.csv", "filepath")
+	flag.StringVar(&fileFlag, "f", "test/fixtures/problems.csv", "File containing the quiz")
 	flag.IntVar(&timeoutFlag, "t", 0, "Set time limit to the quiz")
+	flag.BoolVar(&shuffle, "s", false, "Shuffle the questions")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n", os.Args[0])
 		fmt.Println("Options:")
@@ -57,6 +60,10 @@ func main() {
 	}
 
 	records = validateQuestions(records)
+
+	if shuffle {
+		randomizeSlice(records)
+	}
 
 	scoreChan := make(chan Score)
 	go RunQuiz(records, scoreChan, timeoutFlag)
@@ -150,4 +157,11 @@ func validAnswer(a string) error {
 		return errors.New("Invalid number")
 	}
 	return nil
+}
+
+func randomizeSlice(slice [][]string) {
+	for i := len(slice) - 1; i > 0; i-- {
+		j := rand.Intn(i + 1)
+		slice[i], slice[j] = slice[j], slice[i]
+	}
 }
